@@ -62,6 +62,8 @@ Dyrma PrimeCheck është shumë më i shpejtë se implementimet tradicionale:
 | **GMP (C++)** | 1200 ns | 250 μs | 900 μs |
 | **SymPy (Python)** | 5000 ns | 1500 μs | 5000 μs |
 
+![output](https://github.com/user-attachments/assets/594953ba-21b0-47d0-8404-206a4ee12842)
+
 ## Instalimi dhe Përdorimi
 ### Kërkesat
 - **CPU me AVX-512** (Intel Skylake-X ose më i ri)
