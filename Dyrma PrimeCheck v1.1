@@ -1,0 +1,171 @@
+/*
+ * Dyrma PrimeCheck v1.1 (Optimized)
+ * 
+ * Algoritëm ultra-efikas për kontrollin e numrave të thjeshtë
+ * duke kombinuar AVX-512, Miller-Rabin dhe optimizime moderne.
+ * 
+ * Përmirësime kryesore:
+ * 1. Eliminimi i kontrollit të dyfishtë për numrat e vegjël
+ * 2. Suport i përmirësuar për CPU pa AVX-512
+ * 3. Optimizime në algoritmin e Miller-Rabin
+ * 4: Sistem benchmark më i saktë
+ * 
+ * Autor: Endri Dyrma
+ * Version: 1.1
+ * Licenca: MIT
+ */
+
+#include <iostream>
+#include <chrono>
+#include <cstdint>
+#include <vector>
+#include <immintrin.h>
+
+// Lista e numrave të vegjël të thjeshtë (përdoret për filtrim)
+constexpr uint64_t SMALL_PRIMES[] = {
+    2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71,
+    73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151,
+    157, 163, 167, 173, 179, 181, 191, 193, 197, 199
+};
+
+// Kontrollon nëse numri është në listën e numrave të vegjël të thjeshtë
+bool is_in_small_primes(uint64_t n) {
+    for (auto p : SMALL_PRIMES) {
+        if (p == n) return true;
+        if (p > n) break;
+    }
+    return false;
+}
+
+// Kontrolli i pjesëtuesve me AVX-512 (me fallback për CPU pa suport)
+bool check_divisors(uint64_t n) {
+    #ifdef __AVX512F__
+    constexpr int simd_width = 8;
+    alignas(64) uint64_t primes[simd_width];
+    size_t total_primes = sizeof(SMALL_PRIMES)/sizeof(SMALL_PRIMES[0]);
+
+    for (size_t i = 0; i + simd_width <= total_primes; i += simd_width) {
+        for (int j = 0; j < simd_width; ++j) {
+            primes[j] = SMALL_PRIMES[i + j];
+        }
+        __m512i vn = _mm512_set1_epi64(n);
+        __m512i vprimes = _mm512_load_si512(primes);
+        __m512i vrem = _mm512_rem_epu64(vn, vprimes);
+        if (_mm512_cmp_epi64_mask(vrem, _mm512_setzero_si512(), _MM_CMPINT_EQ) != 0) {
+            return false;
+        }
+    }
+
+    // Kontrolli manual për pjesëtues të mbetur
+    for (size_t i = (total_primes / simd_width) * simd_width; i < total_primes; ++i) {
+        if (n % SMALL_PRIMES[i] == 0) return false;
+    }
+    return true;
+
+    #else
+    // Implementimi i thjeshtë për CPU pa AVX-512
+    for (auto p : SMALL_PRIMES) {
+        if (n % p == 0) return false;
+    }
+    return true;
+    #endif
+}
+
+/*
+ * Testi i Miller-Rabin (optimizuar)
+ * 
+ * Përdor 12 baza deterministike për numrat 64-bit:
+ * [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37]
+ * Sipas: https://en.wikipedia.org/wiki/Miller–Rabin_primality_test
+ */
+bool miller_rabin(uint64_t n) {
+    if (n < 2) return false;
+    if (n == 2) return true;
+
+    // Shkruaj n-1 si d*2^s
+    uint64_t d = n - 1;
+    int s = 0;
+    while ((d & 1) == 0) {
+        d >>= 1;
+        s++;
+    }
+
+    // Testo me bazat e njohura
+    const uint64_t bases[] = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37};
+    for (auto a : bases) {
+        if (a >= n) continue;
+        
+        // Llogarit a^d mod n (optimizuar me eksponencim binar)
+        uint64_t x = 1;
+        uint64_t current = a % n;
+        uint64_t exp = d;
+        while (exp > 0) {
+            if (exp & 1) x = (x * current) % n;
+            current = (current * current) % n;
+            exp >>= 1;
+        }
+
+        if (x == 1 || x == n - 1) continue;
+
+        // Kontrollo rrotullimet
+        bool composite = true;
+        for (int r = 0; r < s - 1; ++r) {
+            x = (x * x) % n;
+            if (x == n - 1) {
+                composite = false;
+                break;
+            }
+        }
+        if (composite) return false;
+    }
+    return true;
+}
+
+// Funksioni kryesor për kontrollin e primalitetit
+bool is_prime(uint64_t n) {
+    if (n <= 1) return false;          // Rastet edge
+    if (is_in_small_primes(n)) return true; // Numrat e vegjël
+    
+    if (!check_divisors(n)) return false;  // Kontrolli me AVX-512
+    return miller_rabin(n);            // Testi final
+}
+
+// Sistem benchmark me 100 përsëritje për saktësi
+void benchmark(uint64_t n) {
+    constexpr int warmup = 10;
+    constexpr int runs = 100;
+    bool result;
+
+    // Warm-up
+    for (int i = 0; i < warmup; ++i) {
+        is_prime(n);
+    }
+
+    // Matja e kohës
+    auto total = 0ns;
+    for (int i = 0; i < runs; ++i) {
+        auto start = std::chrono::high_resolution_clock::now();
+        result = is_prime(n);
+        auto end = std::chrono::high_resolution_clock::now();
+        total += (end - start);
+    }
+
+    std::cout << n << " \t| " << std::boolalpha << result
+              << " \t| Mesatarja: " << (total / runs).count() << " ns\n";
+}
+
+int main() {
+    std::cout << "Dyrma PrimeCheck v1.1 - Rezultatet e Benchmark\n";
+    std::cout << "-------------------------------------------------\n";
+    std::cout << "Numri \t\t| Prime? \t| Koha e Ekzekutimit\n";
+    std::cout << "-------------------------------------------------\n";
+
+    benchmark(99999999999999997ULL);    // Prim
+    benchmark(1000000000000000003ULL);  // Prim
+    benchmark(12345678910987654321ULL); // I përbërë
+    benchmark(9223372036854775783ULL);  // Prim
+    benchmark(18446744073709551557ULL); // Prim i madh 64-bit
+
+    std::cout << "-------------------------------------------------\n";
+    return 0;
+}
