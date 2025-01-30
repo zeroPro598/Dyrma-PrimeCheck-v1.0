@@ -1,0 +1,119 @@
+/*
+ * Dyrma PrimeCheck v1.0
+ *
+ * Një algoritëm ultra-efikas për kontrollin e numrave të thjeshtë
+ * duke përdorur AVX-512 dhe optimizime CPU.
+ *
+ * Autor: Endri Dyrma
+ * Version: 1.0
+ *
+ * Përfshin:
+ * - Kontrollin e pjesëtuesve me AVX-512 (nëse është i disponueshëm)
+ * - Implementim të optimizuar të Miller-Rabin
+ * - Benchmark të integruar
+ *
+ * Licenca: MIT
+ */
+
+#include <iostream>
+#include <chrono>
+#include <cstdint>
+#include <vector>
+#include <immintrin.h>
+
+// Lista e numrave të thjeshtë për filtrimin fillestar
+constexpr uint64_t SMALL_PRIMES[] = {
+    2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71,
+    73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151,
+    157, 163, 167, 173, 179, 181, 191, 193, 197, 199
+};
+
+// Kontrolli i pjesëtuesve me AVX-512 (nëse është i disponueshëm)
+bool check_small_primes_avx512(uint64_t n) {
+    #ifdef __AVX512F__
+    constexpr int simd_width = 8;
+    alignas(64) uint64_t primes[simd_width];
+    size_t total_primes = sizeof(SMALL_PRIMES)/sizeof(SMALL_PRIMES[0]);
+    
+    for (size_t i = 0; i + simd_width <= total_primes; i += simd_width) {
+        for (int j = 0; j < simd_width; ++j) {
+            primes[j] = SMALL_PRIMES[i + j];
+        }
+        __m512i vn = _mm512_set1_epi64(n);
+        __m512i vprimes = _mm512_load_si512(primes);
+        __m512i vrem = _mm512_rem_epu64(vn, vprimes);
+        if (_mm512_cmp_epi64_mask(vrem, _mm512_setzero_si512(), _MM_CMPINT_EQ) != 0) {
+            return false;
+        }
+    }
+    #endif
+
+    // Kontrolli manual për pjesëtues të mbetur
+    for (size_t i = (total_primes / simd_width) * simd_width; i < total_primes; ++i) {
+        if (n % SMALL_PRIMES[i] == 0) return false;
+    }
+    return true;
+}
+
+// Implementimi i Miller-Rabin (CPU)
+bool miller_rabin(uint64_t n) {
+    if (n < 2) return false;
+    uint64_t d = n - 1;
+    int s = 0;
+    while (d % 2 == 0) {
+        d /= 2;
+        s++;
+    }
+    for (uint64_t a : {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37}) {
+        if (a >= n) continue;
+        uint64_t x = 1, current = a % n, exp = d;
+        while (exp > 0) {
+            if (exp % 2 == 1) x = (x * current) % n;
+            current = (current * current) % n;
+            exp /= 2;
+        }
+        if (x == 1 || x == n - 1) continue;
+        bool composite = true;
+        for (int r = 0; r < s - 1; ++r) {
+            x = (x * x) % n;
+            if (x == n - 1) {
+                composite = false;
+                break;
+            }
+        }
+        if (composite) return false;
+    }
+    return true;
+}
+
+// Funksioni për kontrollin kryesor të primalitetit
+bool is_prime(uint64_t n) {
+    for (auto p : SMALL_PRIMES) {
+        if (n == p) return true;
+        if (n % p == 0) return false;
+    }
+    if (!check_small_primes_avx512(n)) return false;
+    return miller_rabin(n);
+}
+
+// Benchmark
+int main() {
+    std::vector<uint64_t> test_numbers = {
+        99999999999999997ULL,  // Prime
+        1000000000000000003ULL, // Prime
+        12345678910987654321ULL, // Composite
+        9223372036854775783ULL   // Prime
+    };
+
+    for (uint64_t num : test_numbers) {
+        auto start = std::chrono::high_resolution_clock::now();
+        bool result = is_prime(num);
+        auto end = std::chrono::high_resolution_clock::now();
+
+        std::cout << num << " is prime? " << std::boolalpha << result
+                  << " | Time: "
+                  << std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count()
+                  << " ns\n";
+    }
+    return 0;
+}
