@@ -97,5 +97,5 @@ This project is licensed under the **MIT License** - you are free to use, modify
 **Endri Dyrma** - Creator of Dyrma PrimeCheck
 
 ---
-**GitHub Repository:** [Coming Soon]
+**GitHub Repository:** [https://github.com/zeroPro598/Dyrma-PrimeCheck-v1.0]
 
