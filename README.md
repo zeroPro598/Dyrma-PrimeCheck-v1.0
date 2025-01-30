@@ -17,6 +17,21 @@ Dyrma PrimeCheck is significantly faster than traditional prime-checking impleme
 | **GMP (C++)** | 1200 ns | 250 μs | 900 μs |
 | **SymPy (Python)** | 5000 ns | 1500 μs | 5000 μs |
 
+![output](https://github.com/user-attachments/assets/594953ba-21b0-47d0-8404-206a4ee12842)
+
+Performance Analysis
+The graphs illustrate the comparison of Dyrma PrimeCheck with GMP (C++) and SymPy (Python) for prime number testing across different number sizes.
+
+1. 64-bit Prime Test
+Dyrma PrimeCheck is ~2.1x faster than GMP and ~8.9x faster than SymPy.
+It completes the test in 561 ms, while GMP takes 1.2 seconds, and SymPy takes 5 seconds.
+2. 1024-bit Prime Test
+Dyrma PrimeCheck is ~2.1x faster than GMP and ~12.5x faster than SymPy.
+For 1024-bit numbers, it completes the test in 120 µs, whereas GMP takes 250 µs, and SymPy takes 1.5 ms.
+3. 2048-bit Prime Test
+Dyrma PrimeCheck is ~2x faster than GMP and ~11x faster than SymPy.
+It completes the test in 450 µs, while GMP takes 900 µs, and SymPy takes 5 ms.
+
 ## Installation & Usage
 ### Requirements
 - **AVX-512 enabled CPU** (Intel Skylake-X or newer)
@@ -63,6 +78,19 @@ Dyrma PrimeCheck është shumë më i shpejtë se implementimet tradicionale:
 | **SymPy (Python)** | 5000 ns | 1500 μs | 5000 μs |
 
 ![output](https://github.com/user-attachments/assets/594953ba-21b0-47d0-8404-206a4ee12842)
+
+Analiza e Performancës
+Grafikët tregojnë krahasimin e Dyrma PrimeCheck me GMP (C++) dhe SymPy (Python) për testime të numrave të thjeshtë në madhësi të ndryshme.
+
+1. 64-bit Prime Test
+Dyrma PrimeCheck është ~2.1x më i shpejtë se GMP dhe ~8.9x më i shpejtë se SymPy.
+Performon në 561 ms, ndërsa GMP merr 1.2 sekonda dhe SymPy 5 sekonda.
+2. 1024-bit Prime Test
+Dyrma PrimeCheck është ~2.1x më i shpejtë se GMP dhe ~12.5x më i shpejtë se SymPy.
+Për 1024-bit numra, ai përfundon testimin në 120 µs, ndërsa GMP kërkon 250 µs, dhe SymPy 1.5 ms.
+3. 2048-bit Prime Test
+Dyrma PrimeCheck është ~2x më i shpejtë se GMP dhe ~11x më i shpejtë se SymPy.
+Performon në 450 µs, ndërsa GMP kërkon 900 µs, dhe SymPy 5 ms.
 
 ## Instalimi dhe Përdorimi
 ### Kërkesat
